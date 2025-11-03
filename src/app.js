@@ -71,6 +71,18 @@ app.get("/feed", async(req, res) => {
     }
 });
 
+app.delete("/deleteUser", async(req, res) => {
+    const userId = req.body.userId;
+
+    try {
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).send("user deleted successfully");
+    } catch(e) {
+        res.status(400).send("Something went wrong")
+    }
+});
+
 connectDB().then(() => {
     console.log("Connected with DB")
     app.listen(7777, () => {
