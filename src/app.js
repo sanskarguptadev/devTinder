@@ -25,21 +25,23 @@ const User = require("./models/user");
 
 const app = express();
 
-app.post("/signup", async (req, res) => {
-    const userObj = {
-        firstName: "Sneha",
-        lastName: "jha",
-        email: "sneha17jha@gmail.com",
-        password: "abc"
-    };
+app.use(express.json()); // middleware will be actived for all the routes
 
-    const user = new User(userObj); //creating new instance of user model
+app.post("/signup", async (req, res) => {
+    console.log(req.body); //data you are sending here but you can't directly ready here, req.body -> undefined because data is sent in json format and our server is not able to read the json data to read that json we need a middle ware
+    // will be used in all the api -> already middleware by express called expressJson Middleware
+    const user = new User(req.body); //creating new instance of user model
+
     try {
-        await user.save(); // data will be save in db this function return a promise
+        await user.save(); //data will be save in db this function return a promise
 
         res.status(200).send("User Added Successfully")
     } catch (err) {
-        res.status(400).send("Error :", err);
+        res.status(400).json({
+            error: err.message,
+            code: err.code || "VALIDATION_FAILED",
+            details: err.errors || err
+        });
     }
     
 });
