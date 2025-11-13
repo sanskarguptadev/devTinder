@@ -1,45 +1,71 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const userSchema = new Schema({
+const userSchema = new Schema(
+  {
     firstName: {
-        type: String,
-        minlength: 3,
-        maxlength: 20,
-        validate: {
-            validator: function (v) {
-                return /^[A-Za-z]+$/.test(v);
-            },
-            message: props => `${props.value} is not a valid first name!`
-        }
+      type: String,
+      minlength: 3,
+      maxlength: 20,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return /^[A-Za-z]+$/.test(v);
+        },
+        message: (props) => `${props.value} is not a valid first name!`,
+      },
     },
     lastName: {
-        type: String,
+      type: String,
     },
     email: {
-        type: String,
-        validate: {
-            validator: function (v) {
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-                    const err = new Error("Invalid email format");
-                    err.code = "EMAIL_INVALID_001";   
-                    throw err;                     
-                }
-                return true;
-            }
-        }
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+            const err = new Error("Invalid email format");
+            err.code = "EMAIL_INVALID_001";
+            throw err;
+          }
+          return true;
+        },
+      },
     },
     password: {
-        type: String,
-        minlength: 3,
+      type: String,
+      required: true,
+      minlength: 3,
     },
     age: {
-        type: Number
+      type: Number,
     },
     gender: {
-        type: String
-    }
-});
+      type: String,
+      validate(value) {
+        if (!["male", "female", "other"].includes(value)) {
+          throw new Error("Gender data is not valid");
+        }
+      },
+    },
+    photoUrl: {
+      type: String,
+    },
+    about: {
+      type: String,
+      default: "This is default description",
+    },
+    skills: {
+      type: [String], //schema has array by default it will create empty space
+    },
+  },
+  {
+    timestamps: true, //timestamps helps in finding when user is registered for the first time
+  }
+);
 
 // mongoose model
 
