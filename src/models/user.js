@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validator = require("validator");
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -24,15 +25,10 @@ const userSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      validate: {
-        validator: function (v) {
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-            const err = new Error("Invalid email format");
-            err.code = "EMAIL_INVALID_001";
-            throw err;
-          }
-          return true;
-        },
+      validate(value) {
+        if(!validator.isEmail(value)) {
+            throw new Error("Invalid Email:"+ value); 
+        }
       },
     },
     password: {

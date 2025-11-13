@@ -40,7 +40,6 @@ app.post("/signup", async (req, res) => {
     res.status(400).json({
       error: err.message,
       code: err.code || "VALIDATION_FAILED",
-      details: err.errors || err,
     });
   }
 });
