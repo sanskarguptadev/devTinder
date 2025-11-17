@@ -22,20 +22,68 @@
 const express = require("express");
 const connectDB = require("./config/database"); // this file always run first connect with db then you should listen to requests
 const User = require("./models/user");
+const { validateSignupData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
+const validator = require('validator');
 
 const app = express();
 
 app.use(express.json()); // middleware will be actived for all the routes
 
 app.post("/signup", async (req, res) => {
-  console.log(req.body); //data you are sending here but you can't directly ready here, req.body -> undefined because data is sent in json format and our server is not able to read the json data to read that json we need a middle ware
-  // will be used in all the api -> already middleware by express called expressJson Middleware
-  const user = new User(req.body); //creating new instance of user model
+  //   console.log(req.body); //data you are sending here but you can't directly ready here, req.body -> undefined because data is sent in json format and our server is not able to read the json data to read that json we need a middle ware
+  //   // will be used in all the api -> already middleware by express called expressJson Middleware
+  //   const user = new User(req.body); //creating new instance of user model
 
   try {
+    // validation of data
+    validateSignupData(req);
+
+    const { firstName, lastName, email, password } = req.body;
+
+    // Encrypt the password
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+    });
+
     await user.save(); //data will be save in db this function return a promise
 
     res.status(200).send("User Added Successfully");
+  } catch (err) {
+    res.status(400).json({
+      error: err.message,
+      code: err.code || "VALIDATION_FAILED",
+    });
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if(!validator.isEmail(email)) {
+        throw new Error("Enter valid mail Id");
+    }
+
+    const user = await User.findOne({ email: email });
+
+    if(!user) {
+        throw new Error("User is not registered");
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if(isPasswordValid) {
+        res.status(200).send('user login successfully');
+    } else {
+        res.status(200).send('User or Password is not correct');
+    }
   } catch (err) {
     res.status(400).json({
       error: err.message,
