@@ -25,10 +25,13 @@ const User = require("./models/user");
 const { validateSignupData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
 const validator = require('validator');
+const cookieParser = require("cookie-parser");
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
 app.use(express.json()); // middleware will be actived for all the routes
+app.use(cookieParser()); // middle ware to read the cookies
 
 app.post("/signup", async (req, res) => {
   //   console.log(req.body); //data you are sending here but you can't directly ready here, req.body -> undefined because data is sent in json format and our server is not able to read the json data to read that json we need a middle ware
@@ -74,15 +77,20 @@ app.post("/login", async (req, res) => {
     const user = await User.findOne({ email: email });
 
     if(!user) {
-        throw new Error("User is not registered");
+        throw new Error("Invalid Username or Password");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
+ 
     if(isPasswordValid) {
+        // cookie work
+        // create a JWT token
+        const token = await jwt.sign({ _id: user._id }, "DEV")
+        // Add the token to cookie and send the response back to user
+        res.cookie("token", token);
         res.status(200).send('user login successfully');
     } else {
-        res.status(200).send('User or Password is not correct');
+        res.status(200).send('Invalid Username or Password');
     }
   } catch (err) {
     res.status(400).json({
@@ -91,6 +99,32 @@ app.post("/login", async (req, res) => {
     });
   }
 });
+
+app.get("/profile", async(req, res) => {
+    try {
+        const cookie = req.cookies;
+        const { token } = cookie;
+
+        if(!token) {
+            throw new Error("Invalid token");
+        }
+    
+        const decodedMesa = await jwt.verify(token, "DEV");
+        const { _id } = decodedMesa;
+    
+        const user = await User.findById(_id);
+
+        if(!user) {
+            throw new Error("User does not exist");
+        }
+    
+        res.status(200).send(user);
+
+    } catch(err) {
+        res.status(400).send('Error :' + err.message)
+    }
+   
+})
 
 // get user by email
 
