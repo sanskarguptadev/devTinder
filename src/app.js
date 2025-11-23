@@ -23,12 +23,12 @@ const express = require("express");
 const connectDB = require("./config/database"); // this file always run first connect with db then you should listen to requests
 const User = require("./models/user");
 const { validateSignupData } = require("./utils/validation");
-const bcrypt = require("bcrypt");
+
 const validator = require('validator');
 const cookieParser = require("cookie-parser");
-const jwt = require('jsonwebtoken');
 
 const app = express();
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json()); // middleware will be actived for all the routes
 app.use(cookieParser()); // middle ware to read the cookies
@@ -80,14 +80,14 @@ app.post("/login", async (req, res) => {
         throw new Error("Invalid Username or Password");
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.validatePassword(password);
  
     if(isPasswordValid) {
         // cookie work
         // create a JWT token
-        const token = await jwt.sign({ _id: user._id }, "DEV")
+        const token = await user.getJWT();
         // Add the token to cookie and send the response back to user
-        res.cookie("token", token);
+        res.cookie("token", token, { httpOnly: true });
         res.status(200).send('user login successfully');
     } else {
         res.status(200).send('Invalid Username or Password');
@@ -100,35 +100,24 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async(req, res) => {
-    try {
-        const cookie = req.cookies;
-        const { token } = cookie;
-
-        if(!token) {
-            throw new Error("Invalid token");
-        }
-    
-        const decodedMesa = await jwt.verify(token, "DEV");
-        const { _id } = decodedMesa;
-    
-        const user = await User.findById(_id);
-
-        if(!user) {
-            throw new Error("User does not exist");
-        }
+app.get("/profile", userAuth, async(req, res) => {
+    try {    
+        const user = req.user; 
     
         res.status(200).send(user);
-
     } catch(err) {
         res.status(400).send('Error :' + err.message)
     }
    
 })
 
+app.post("/sendconnectionRequest", userAuth, async(req, res) => {
+    res.send(req.user);
+});
+
 // get user by email
 
-app.get("/user", async (req, res) => {
+app.get("/user", userAuth, async (req, res) => {
   const userEmail = req.body.email;
   try {
     const user = await User.findOne({ email: userEmail }).exec();
@@ -141,7 +130,7 @@ app.get("/user", async (req, res) => {
   }
 });
 
-app.get("/feed", async (req, res) => {
+app.get("/feed", userAuth, async (req, res) => {
   try {
     const users = await User.find({});
 
@@ -151,7 +140,7 @@ app.get("/feed", async (req, res) => {
   }
 });
 
-app.delete("/deleteUser", async (req, res) => {
+app.delete("/deleteUser", userAuth, async (req, res) => {
   const userId = req.body.userId;
 
   try {
@@ -164,7 +153,7 @@ app.delete("/deleteUser", async (req, res) => {
 });
 
 //update user
-app.patch("/user/:userId", async (req, res) => {
+app.patch("/user/:userId", userAuth, async (req, res) => {
   try {
     const userId = req.params?.userId;
     const data = req.body;
